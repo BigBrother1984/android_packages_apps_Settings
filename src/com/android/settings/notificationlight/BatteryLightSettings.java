@@ -41,8 +41,8 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
     private static final String MEDIUM_COLOR_PREF = "medium_color";
     private static final String FULL_COLOR_PREF = "full_color";
 
+    private boolean mLightEnabled;
     private boolean mMultiColorLed;
-    private CheckBoxPreference mEnabledPref;
     private ApplicationLightPreference mLowColorPref;
     private ApplicationLightPreference mMediumColorPref;
     private ApplicationLightPreference mFullColorPref;
@@ -55,8 +55,6 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
 
         PreferenceScreen prefSet = getPreferenceScreen();
 
-        setHasOptionsMenu(true);
-
         // Low, Medium and full color preferences
         mLowColorPref = (ApplicationLightPreference) prefSet.findPreference(LOW_COLOR_PREF);
         mLowColorPref.setOnPreferenceChangeListener(this);
@@ -67,11 +65,7 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
         mFullColorPref = (ApplicationLightPreference) prefSet.findPreference(FULL_COLOR_PREF);
         mFullColorPref.setOnPreferenceChangeListener(this);
 
-        mEnabledPref = (CheckBoxPreference)
-                findPreference(BATTERY_LIGHT_ENABLED);
-        mEnabledPref.setChecked(Settings.System.getInt(getContentResolver(),
-                Settings.System.BATTERY_LIGHT_ENABLED, 0) == 1);
-        mEnabledPref.setOnPreferenceChangeListener(this);
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -83,6 +77,9 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
     private void refreshDefault() {
         ContentResolver resolver = getContentResolver();
         Resources res = getResources();
+
+        mLightEnabled = Settings.System.getInt(
+                resolver, BATTERY_LIGHT_ENABLED, 0) == 1;
 
         if (mLowColorPref != null) {
             int lowColor = Settings.System.getInt(resolver, Settings.System.BATTERY_LIGHT_LOW_COLOR,
@@ -100,6 +97,16 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
             int fullColor = Settings.System.getInt(resolver, Settings.System.BATTERY_LIGHT_FULL_COLOR,
                     res.getInteger(com.android.internal.R.integer.config_notificationsBatteryFullARGB));
             mFullColorPref.setAllValues(fullColor, 0, 0, false);
+        }
+
+        PreferenceScreen prefSet = getPreferenceScreen();
+        PreferenceGroup generalPrefs = (PreferenceGroup) prefSet.findPreference("general_section");
+        if (generalPrefs != null) {
+        
+            // Light preference
+            CheckBoxPreference cPref = (CheckBoxPreference) prefSet.findPreference(BATTERY_LIGHT_ENABLED);
+            cPref.setChecked(mLightEnabled);
+            cPref.setOnPreferenceChangeListener(this);
         }
     }
 
@@ -155,13 +162,16 @@ public class BatteryLightSettings extends SettingsPreferenceFragment implements
 
     @Override
     public boolean onPreferenceChange(Preference preference, Object objValue) {
-        if (preference == mEnabledPref) {
-            boolean enabled = (Boolean) objValue;
+        String key = preference.getKey();
+
+        if (BATTERY_LIGHT_ENABLED.equals(key)) {
+            mLightEnabled = (Boolean) objValue;
             Settings.System.putInt(getContentResolver(),
-                    Settings.System.BATTERY_LIGHT_ENABLED, enabled ? 1 : 0);
+                    Settings.System.BATTERY_LIGHT_ENABLED,
+                    mLightEnabled ? 1 : 0);
         } else {
-            ApplicationLightPreference lightPref = (ApplicationLightPreference) preference;
-            updateValues(lightPref.getKey(), lightPref.getColor());
+            ApplicationLightPreference tPref = (ApplicationLightPreference) preference;
+            updateValues(key, tPref.getColor());
         }
 
         return true;
